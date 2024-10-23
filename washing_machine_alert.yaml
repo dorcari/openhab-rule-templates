@@ -1,0 +1,70 @@
+uid: dorcari:washing_machine_alert
+label: Alert when Washing Machine Finished
+description: This will monitor the power consumption of a washing machine and send an alert command when it gets below a threshold, meaning it has finished.
+configDescriptions:
+ - name: powerItem
+   type: TEXT
+   context: item
+   label: Power Item
+   required: true
+   description: Item that holds the power (in watts) of the washing machine. Can be a quantity type (Number:Power).
+ - name: threshold
+   type: DECIMAL
+   label: Threshold
+   required: true
+   defaultValue: 2
+   description: When the power measurement was at or above the threshold and crosses below it, trigger the alert.
+ - name: option
+   label: Select type of action
+   description: Select if sending command or boradcast notification, default Command
+   type: TEXT
+   options:
+     - label: "Command" 
+       value: "command"
+     - label: "Notification" 
+       value: "notification"
+   limitToOptions: true
+   required: true
+   defaultValue: command
+ - name: alertItem
+   type: TEXT
+   context: item
+   label: Alert Item
+   required: false
+   description: Item to send a command to when the measured power gets below the threshold. For instance, a Hue light advanced Alert channel, required if Command option was selected.
+ - name: alertField
+   type: TEXT
+   label: Alert Field
+   required: true
+   defaultValue: LSELECT
+   description: Command to send to the alert item (for an item linked to a Hue light alert channel, LSELECT will flash the light for a few seconds).
+triggers:
+ - id: "1"
+   configuration:
+     itemName: "{{powerItem}}"
+     state: ""
+   type: core.ItemStateChangeTrigger
+conditions: []
+actions:
+ - inputs: {}
+   id: "2"
+   configuration:
+     type: application/javascript
+     script: |
+        var powerCons = items.{{powerItem}};
+        var alert = items.{{alertItem}};
+        var from = parseFloat(powerCons.persistence.previousState().state);
+        var to = parseFloat(powerCons.state);
+        
+        console.info(from + '>' + to);
+
+        
+        if(to < {{threshold}} && from >= {{threshold}}) {
+          if(command == {{option}}){
+            alert.sendCommand('{{alertField}}')
+          }else{
+            actions.notificationBuilder('{{alertField}}').send();
+          }
+          
+        }
+   type: script.ScriptAction
